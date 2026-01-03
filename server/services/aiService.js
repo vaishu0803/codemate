@@ -7,24 +7,24 @@ exports.callGemini = async (prompt) => {
       {
         contents: [
           {
-            parts: [{ text: prompt }]
-          }
-        ]
+            parts: [{ text: prompt }],
+          },
+        ],
       },
       {
         params: {
-          key: process.env.GEMINI_API_KEY
+          key: process.env.GEMINI_API_KEY,
         },
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
 
     return response.data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error(
-      "Gemini Error:",
+      "❌ Gemini Error:",
       error.response?.data || error.message
     );
     throw error;

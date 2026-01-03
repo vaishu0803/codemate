@@ -8,14 +8,25 @@ exports.processCode = async (req, res) => {
   try {
     const { code, language, action } = req.body;
 
+    if (!code || !action) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
+
+    const normalizedAction = action.toLowerCase();
+    let promptPayload = { code, language, inputType: "paste" };
     let prompt;
 
-    if (action === "explain") {
-      prompt = explainPrompt(code, language);
-    } else if (action === "optimize") {
-      prompt = optimizePrompt(code, language);
-    } else if (action === "testcases") {
-      prompt = testcasePrompt(code, language);
+    if (normalizedAction === "explain") {
+      prompt = explainPrompt(promptPayload);
+    } else if (normalizedAction === "optimize") {
+      prompt = optimizePrompt(promptPayload);
+    } else if (normalizedAction === "testcase") {
+      prompt = testcasePrompt(promptPayload);
+    } else if (normalizedAction === "generate") {
+      prompt = explainPrompt(promptPayload); // temporary
     } else {
       return res.status(400).json({ message: "Invalid action" });
     }
@@ -32,12 +43,11 @@ exports.processCode = async (req, res) => {
 
     res.json({
       success: true,
-      action,
-      result: parsedResult
+      action: normalizedAction,
+      result: parsedResult,
     });
-
   } catch (error) {
-    console.error(error);
+    console.error("❌ AI Controller Error:", error);
     res.status(500).json({ message: "AI processing failed" });
   }
 };
