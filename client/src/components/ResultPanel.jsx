@@ -8,7 +8,29 @@ const ResultPanel = ({
   isMaximized,
   setIsMaximized,
 }) => {
-  const data = activeTab ? results[activeTab] : null;
+  const rawData = activeTab ? results[activeTab] : null;
+
+  let parsedData = null;
+  let plainText = null;
+
+  if (rawData) {
+    if (typeof rawData === "object") {
+      parsedData = rawData;
+    } else if (typeof rawData === "string") {
+      const cleaned = rawData.replace(/```json|```/g, "").trim();
+
+      // ✅ parse ONLY if it looks like JSON
+      if (cleaned.startsWith("{") || cleaned.startsWith("[")) {
+        try {
+          parsedData = JSON.parse(cleaned);
+        } catch {
+          plainText = rawData;
+        }
+      } else {
+        plainText = rawData;
+      }
+    }
+  }
 
   return (
     <section
@@ -36,7 +58,7 @@ const ResultPanel = ({
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`px-3 py-1 text-sm rounded transition ${
+                className={`px-3 py-1 text-sm rounded ${
                   activeTab === key
                     ? "bg-black text-white"
                     : "text-gray-500 hover:bg-gray-100"
@@ -52,47 +74,57 @@ const ResultPanel = ({
         <div className="min-h-[200px] p-6 text-sm text-gray-700 overflow-y-auto">
           {isLoading ? (
             <div className="text-center text-gray-500">Processing...</div>
-          ) : data ? (
+          ) : parsedData ? (
             <div className="space-y-6">
+              {parsedData.overview && (
+                <div>
+                  <h4 className="font-semibold mb-1">Overview</h4>
+                  <p>{parsedData.overview}</p>
+                </div>
+              )}
 
-              <div>
-                <h4 className="font-semibold mb-1">Overview</h4>
-                <p>{data.overview}</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-1">Key Steps</h4>
-                <ul className="list-disc pl-5">
-                  {data.keySteps?.map((step, i) => (
-                    <li key={i}>{step}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-1">Time Complexity</h4>
-                <p>{data.timeComplexity}</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-1">Space Complexity</h4>
-                <p>{data.spaceComplexity}</p>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-1">Edge Cases</h4>
-                {data.edgeCases?.length > 0 ? (
-                  <ul className="list-disc pl-5">
-                    {data.edgeCases.map((edge, i) => (
-                      <li key={i}>{edge}</li>
+              {parsedData.keySteps && (
+                <div>
+                  <h4 className="font-semibold mb-1">Key Steps</h4>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {parsedData.keySteps.map((step, i) => (
+                      <li key={i}>{step}</li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="text-gray-500">None</p>
-                )}
-              </div>
+                </div>
+              )}
 
+              {parsedData.timeComplexity && (
+                <div>
+                  <h4 className="font-semibold mb-1">Time Complexity</h4>
+                  <p>{parsedData.timeComplexity}</p>
+                </div>
+              )}
+
+              {parsedData.spaceComplexity && (
+                <div>
+                  <h4 className="font-semibold mb-1">Space Complexity</h4>
+                  <p>{parsedData.spaceComplexity}</p>
+                </div>
+              )}
+
+              {parsedData.edgeCases && (
+                <div>
+                  <h4 className="font-semibold mb-1">Edge Cases</h4>
+                  {parsedData.edgeCases.length ? (
+                    <ul className="list-disc pl-5 space-y-1">
+                      {parsedData.edgeCases.map((edge, i) => (
+                        <li key={i}>{edge}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500">None</p>
+                  )}
+                </div>
+              )}
             </div>
+          ) : plainText ? (
+            <pre className="whitespace-pre-wrap">{plainText}</pre>
           ) : (
             <div className="text-center text-gray-400">
               Select an action to generate results

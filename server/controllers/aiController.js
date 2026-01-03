@@ -2,12 +2,12 @@ const explainPrompt = require("../prompts/explainPrompt");
 const optimizePrompt = require("../prompts/optimizePrompt");
 const testcasePrompt = require("../prompts/testcasePrompt");
 const { callGemini } = require("../services/aiService");
-const cleanText = require("../utils/cleanText");
 
 exports.processCode = async (req, res) => {
   try {
-    const { code, language, action } = req.body;
+    const { code, language, action, inputType } = req.body;
 
+    // 🔒 Validate input
     if (!code || !action) {
       return res.status(400).json({
         success: false,
@@ -15,39 +15,61 @@ exports.processCode = async (req, res) => {
       });
     }
 
-    const normalizedAction = action.toLowerCase();
-    let promptPayload = { code, language, inputType: "paste" };
     let prompt;
 
-    if (normalizedAction === "explain") {
-      prompt = explainPrompt(promptPayload);
-    } else if (normalizedAction === "optimize") {
-      prompt = optimizePrompt(promptPayload);
-    } else if (normalizedAction === "testcase") {
-      prompt = testcasePrompt(promptPayload);
-    } else if (normalizedAction === "generate") {
-      prompt = explainPrompt(promptPayload); // temporary
-    } else {
-      return res.status(400).json({ message: "Invalid action" });
+    // 🎯 Choose prompt
+    switch (action) {
+      case "explain":
+        prompt = explainPrompt({ code, language, inputType });
+        break;
+
+      case "optimize":
+        prompt = optimizePrompt({ code, language, inputType });
+        break;
+
+      case "testcase":
+        prompt = testcasePrompt({ code, language, inputType });
+        break;
+
+      case "generate":
+        // temporary fallback – you can add bruteForcePrompt later
+        prompt = explainPrompt({ code, language, inputType });
+        break;
+
+      default:
+        return res.status(400).json({
+          success: false,
+          message: "Invalid action",
+        });
     }
 
+    // 🤖 Call Gemini
     const result = await callGemini(prompt);
 
-    let parsedResult;
+    // 🧠 Flexible JSON handling (VERY IMPORTANT)
+    let finalResult;
     try {
-      parsedResult = JSON.parse(result);
-      parsedResult = cleanText(parsedResult);
+      finalResult = JSON.parse(
+        result.replace(/```json|```/g, "").trim()
+      );
     } catch {
-      parsedResult = cleanText(result);
+      // fallback to plain text
+      finalResult = result;
     }
 
-    res.json({
+    // ✅ Success response
+    return res.json({
       success: true,
-      action: normalizedAction,
-      result: parsedResult,
+      action,
+      result: finalResult,
     });
+
   } catch (error) {
     console.error("❌ AI Controller Error:", error);
-    res.status(500).json({ message: "AI processing failed" });
+
+    return res.status(500).json({
+      success: false,
+      message: "AI processing failed",
+    });
   }
 };
